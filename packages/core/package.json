@@ -1,0 +1,16 @@
+{
+  "name": "@chip-journey/core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "vite": "8.2.1"
+  }
+}
