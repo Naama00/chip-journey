@@ -103,3 +103,108 @@ export class Circuit {
     }
   }
 }
+
+export function addFullAdder(
+  circuit: Circuit,
+  prefix: string,
+  aId: string,
+  bId: string,
+  cinId: string,
+): { sumId: string; carryOutId: string } {
+  const xor1Id = `${prefix}_xor1`;
+  const and1Id = `${prefix}_and1`;
+  const sumId = `${prefix}_sum`;
+  const and2Id = `${prefix}_and2`;
+  const carryOutId = `${prefix}_carryOut`;
+
+  circuit.addNode({ id: xor1Id, kind: 'XOR', inputs: [aId, bId] });
+  circuit.addNode({ id: and1Id, kind: 'AND', inputs: [aId, bId] });
+  circuit.addNode({ id: sumId, kind: 'XOR', inputs: [xor1Id, cinId] });
+  circuit.addNode({ id: and2Id, kind: 'AND', inputs: [xor1Id, cinId] });
+  circuit.addNode({ id: carryOutId, kind: 'OR', inputs: [and1Id, and2Id] });
+
+  return { sumId, carryOutId };
+}
+
+export function addMux2(
+  circuit: Circuit,
+  prefix: string,
+  selId: string,
+  xId: string,
+  yId: string,
+): string {
+  const notSelId = `${prefix}_notSel`;
+  const andXId = `${prefix}_andX`;
+  const andYId = `${prefix}_andY`;
+  const outputId = `${prefix}_out`;
+
+  circuit.addNode({ id: notSelId, kind: 'NOT', inputs: [selId] });
+  circuit.addNode({ id: andXId, kind: 'AND', inputs: [notSelId, xId] });
+  circuit.addNode({ id: andYId, kind: 'AND', inputs: [selId, yId] });
+  circuit.addNode({ id: outputId, kind: 'OR', inputs: [andXId, andYId] });
+
+  return outputId;
+}
+
+export function addAlu(
+  circuit: Circuit,
+  prefix: string,
+  aIds: string[],
+  bIds: string[],
+  opSelId: string,
+): { resultIds: string[]; carryOutId: string; zeroId: string } {
+  if (aIds.length !== 8 || bIds.length !== 8) {
+    throw new Error('addAlu requires exactly 8 aIds and 8 bIds');
+  }
+
+  const muxedBIds: string[] = [];
+
+  for (let i = 0; i < 8; i += 1) {
+    const notBId = `${prefix}_notB${i}`;
+    circuit.addNode({ id: notBId, kind: 'NOT', inputs: [bIds[i]] });
+
+    const muxedBId = addMux2(circuit, `${prefix}_muxB${i}`, opSelId, bIds[i], notBId);
+    muxedBIds.push(muxedBId);
+  }
+
+  const { sumIds, carryOutId } = addRippleCarryAdder(circuit, `${prefix}_adder`, aIds, muxedBIds, opSelId);
+
+  let previousOrId = sumIds[0];
+  for (let i = 1; i < sumIds.length; i += 1) {
+    const orId = `${prefix}_zeroOr${i}`;
+    circuit.addNode({ id: orId, kind: 'OR', inputs: [previousOrId, sumIds[i]] });
+    previousOrId = orId;
+  }
+
+  const zeroId = `${prefix}_zero`;
+  circuit.addNode({ id: zeroId, kind: 'NOT', inputs: [previousOrId] });
+
+  return { resultIds: sumIds, carryOutId, zeroId };
+}
+
+export function addRippleCarryAdder(
+  circuit: Circuit,
+  prefix: string,
+  aIds: string[],
+  bIds: string[],
+  carryInId: string,
+): { sumIds: string[]; carryOutId: string } {
+  if (aIds.length !== 8 || bIds.length !== 8) {
+    throw new Error('addRippleCarryAdder requires exactly 8 aIds and 8 bIds');
+  }
+
+  const sumIds: string[] = [];
+  let currentCarryId = carryInId;
+  let finalCarryOutId = carryInId;
+
+  for (let i = 0; i < 8; i += 1) {
+    const bitPrefix = `${prefix}_bit${i}`;
+    const { sumId, carryOutId } = addFullAdder(circuit, bitPrefix, aIds[i], bIds[i], currentCarryId);
+
+    sumIds.push(sumId);
+    currentCarryId = carryOutId;
+    finalCarryOutId = carryOutId;
+  }
+
+  return { sumIds, carryOutId: finalCarryOutId };
+}
