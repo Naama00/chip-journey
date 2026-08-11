@@ -21,12 +21,13 @@ describe('customProfile', () => {
     }
   });
 
-  it('has no duplicate opcode values', () => {
-    const opcodeSet = new Set<number>();
+  it('has no duplicate opcode/dispatchValue combinations', () => {
+    const opcodeDispatchSet = new Set<string>();
 
     for (const format of customProfile.instructionSet) {
-      expect(opcodeSet.has(format.opcode)).toBe(false);
-      opcodeSet.add(format.opcode);
+      const dispatchKey = `${format.opcode}:${format.dispatchValue ?? null}`;
+      expect(opcodeDispatchSet.has(dispatchKey)).toBe(false);
+      opcodeDispatchSet.add(dispatchKey);
     }
   });
 });

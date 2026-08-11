@@ -12,16 +12,36 @@ export class Register {
   }
 }
 
-type RegisterName = 'R0' | 'R1' | 'R2' | 'R3';
-const registerNames: RegisterName[] = ['R0', 'R1', 'R2', 'R3'];
-
 export class RegisterFile {
-  private registers: Record<RegisterName, Register[]> = {
-    R0: Array.from({ length: 8 }, () => new Register()),
-    R1: Array.from({ length: 8 }, () => new Register()),
-    R2: Array.from({ length: 8 }, () => new Register()),
-    R3: Array.from({ length: 8 }, () => new Register()),
-  };
+  private readonly _registerCount: number;
+  private readonly _wordWidth: number;
+  private readonly registers: Record<string, Register[]>;
+
+  constructor(registerCount: number, wordWidth: number) {
+    if (!Number.isInteger(registerCount) || registerCount < 1) {
+      throw new Error('registerCount must be a positive integer');
+    }
+
+    if (!Number.isInteger(wordWidth) || wordWidth < 1) {
+      throw new Error('wordWidth must be a positive integer');
+    }
+
+    this._registerCount = registerCount;
+    this._wordWidth = wordWidth;
+    this.registers = {};
+
+    for (let i = 1; i < registerCount; i += 1) {
+      this.registers[`R${i}`] = Array.from({ length: wordWidth }, () => new Register());
+    }
+  }
+
+  public get registerCount(): number {
+    return this._registerCount;
+  }
+
+  public get wordWidth(): number {
+    return this._wordWidth;
+  }
 
   read(name: string): Signal[] {
     if (!this.isValidRegisterName(name)) {
@@ -29,7 +49,7 @@ export class RegisterFile {
     }
 
     if (name === 'R0') {
-      return [0, 0, 0, 0, 0, 0, 0, 0];
+      return Array.from({ length: this._wordWidth }, () => 0 as Signal);
     }
 
     return this.registers[name].map((bitRegister) => bitRegister.read());
@@ -40,8 +60,8 @@ export class RegisterFile {
       throw new Error(`Invalid register name: ${name}`);
     }
 
-    if (nextValue.length !== 8) {
-      throw new Error('RegisterFile clockTick requires exactly 8 bits');
+    if (nextValue.length !== this._wordWidth) {
+      throw new Error(`RegisterFile clockTick requires exactly ${this._wordWidth} bits`);
     }
 
     if (name === 'R0') {
@@ -49,13 +69,18 @@ export class RegisterFile {
     }
 
     const targetRegisters = this.registers[name];
-    for (let i = 0; i < 8; i += 1) {
+    for (let i = 0; i < this._wordWidth; i += 1) {
       targetRegisters[i].clockTick(nextValue[i]);
     }
   }
 
-  private isValidRegisterName(name: string): name is RegisterName {
-    return registerNames.includes(name as RegisterName);
+  private isValidRegisterName(name: string): boolean {
+    if (!/^R\d+$/.test(name)) {
+      return false;
+    }
+
+    const index = Number(name.slice(1));
+    return Number.isInteger(index) && index >= 0 && index < this._registerCount;
   }
 }
 

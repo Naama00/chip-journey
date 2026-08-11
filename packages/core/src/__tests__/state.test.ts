@@ -18,7 +18,7 @@ describe('Register', () => {
 
 describe('RegisterFile', () => {
   it('reads and writes register values for R1, R2, and R3', () => {
-    const file = new RegisterFile();
+    const file = new RegisterFile(4, 8);
     const r1Value: Signal[] = [1, 0, 1, 0, 1, 0, 1, 0];
     const r2Value: Signal[] = [0, 1, 0, 1, 0, 1, 0, 1];
     const r3Value: Signal[] = [1, 1, 1, 1, 0, 0, 0, 0];
@@ -33,7 +33,7 @@ describe('RegisterFile', () => {
   });
 
   it('keeps R0 hardwired to zero even after clockTick', () => {
-    const file = new RegisterFile();
+    const file = new RegisterFile(4, 8);
 
     file.clockTick('R0', [1, 1, 1, 1, 1, 1, 1, 1]);
 
@@ -41,16 +41,28 @@ describe('RegisterFile', () => {
   });
 
   it('throws on invalid register names', () => {
-    const file = new RegisterFile();
+    const file = new RegisterFile(4, 8);
 
     expect(() => file.read('R4')).toThrow();
     expect(() => file.clockTick('R4', [0, 0, 0, 0, 0, 0, 0, 0])).toThrow();
   });
 
   it('throws when writing an invalid bit array', () => {
-    const file = new RegisterFile();
+    const file = new RegisterFile(4, 8);
 
     expect(() => file.clockTick('R1', [0, 1, 0] as Signal[])).toThrow();
+  });
+
+  it('supports a larger register file shape and keeps R0 hardwired to zero', () => {
+    const file = new RegisterFile(32, 32);
+    const value: Signal[] = Array.from({ length: 32 }, (_, index) => (index % 2 === 0 ? 1 : 0) as Signal);
+
+    file.clockTick('R1', value);
+
+    expect(file.read('R1')).toEqual(value);
+    expect(file.read('R0')).toEqual(Array.from({ length: 32 }, () => 0));
+    expect(file.registerCount).toBe(32);
+    expect(file.wordWidth).toBe(32);
   });
 });
 

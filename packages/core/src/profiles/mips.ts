@@ -1,0 +1,127 @@
+import { ProcessorProfile } from '../profile';
+
+export const mipsProfile: ProcessorProfile = {
+  name: 'MIPS',
+  dataWidth: 32,
+  instructionWidth: 32,
+  registerCount: 32,
+  harvard: true,
+  instructionSet: [
+    {
+      mnemonic: 'ADD',
+      opcode: 0x00,
+      opcodeWidth: 6,
+      fields: [
+        { name: 'rs', width: 5 },
+        { name: 'rt', width: 5 },
+        { name: 'rd', width: 5 },
+        { name: 'shamt', width: 5 },
+        { name: 'funct', width: 6 },
+      ],
+      dispatchField: 'funct',
+      dispatchValue: 0x20,
+    },
+    {
+      mnemonic: 'SUB',
+      opcode: 0x00,
+      opcodeWidth: 6,
+      fields: [
+        { name: 'rs', width: 5 },
+        { name: 'rt', width: 5 },
+        { name: 'rd', width: 5 },
+        { name: 'shamt', width: 5 },
+        { name: 'funct', width: 6 },
+      ],
+      dispatchField: 'funct',
+      dispatchValue: 0x22,
+    },
+    {
+      mnemonic: 'AND',
+      opcode: 0x00,
+      opcodeWidth: 6,
+      fields: [
+        { name: 'rs', width: 5 },
+        { name: 'rt', width: 5 },
+        { name: 'rd', width: 5 },
+        { name: 'shamt', width: 5 },
+        { name: 'funct', width: 6 },
+      ],
+      dispatchField: 'funct',
+      dispatchValue: 0x24,
+    },
+    {
+      mnemonic: 'OR',
+      opcode: 0x00,
+      opcodeWidth: 6,
+      fields: [
+        { name: 'rs', width: 5 },
+        { name: 'rt', width: 5 },
+        { name: 'rd', width: 5 },
+        { name: 'shamt', width: 5 },
+        { name: 'funct', width: 6 },
+      ],
+      dispatchField: 'funct',
+      dispatchValue: 0x25,
+    },
+    {
+      mnemonic: 'SLT',
+      opcode: 0x00,
+      opcodeWidth: 6,
+      fields: [
+        { name: 'rs', width: 5 },
+        { name: 'rt', width: 5 },
+        { name: 'rd', width: 5 },
+        { name: 'shamt', width: 5 },
+        { name: 'funct', width: 6 },
+      ],
+      dispatchField: 'funct',
+      dispatchValue: 0x2A,
+    },
+    {
+      mnemonic: 'ADDI',
+      opcode: 0x08,
+      opcodeWidth: 6,
+      fields: [
+        { name: 'rs', width: 5 },
+        { name: 'rt', width: 5 },
+        { name: 'immediate', width: 16 },
+      ],
+    },
+    {
+      mnemonic: 'LW',
+      opcode: 0x23,
+      opcodeWidth: 6,
+      fields: [
+        { name: 'rs', width: 5 },
+        { name: 'rt', width: 5 },
+        { name: 'immediate', width: 16 },
+      ],
+    },
+    {
+      mnemonic: 'SW',
+      opcode: 0x2B,
+      opcodeWidth: 6,
+      fields: [
+        { name: 'rs', width: 5 },
+        { name: 'rt', width: 5 },
+        { name: 'immediate', width: 16 },
+      ],
+    },
+    {
+      mnemonic: 'BEQ',
+      opcode: 0x04,
+      opcodeWidth: 6,
+      fields: [
+        { name: 'rs', width: 5 },
+        { name: 'rt', width: 5 },
+        { name: 'immediate', width: 16 },
+      ],
+    },
+    {
+      mnemonic: 'J',
+      opcode: 0x02,
+      opcodeWidth: 6,
+      fields: [{ name: 'address', width: 26 }],
+    },
+  ],
+};
