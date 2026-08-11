@@ -68,14 +68,14 @@ describe('RegisterFile', () => {
 
 describe('Memory', () => {
   it('initializes all bytes to zero', () => {
-    const memory = new Memory();
+    const memory = new Memory(256, 8);
 
     expect(memory.read(0)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
     expect(memory.read(255)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
   it('writes and reads back a value at a valid address', () => {
-    const memory = new Memory();
+    const memory = new Memory(256, 8);
     const value: Signal[] = [1, 0, 1, 0, 1, 0, 1, 0];
 
     memory.write(42, value);
@@ -83,7 +83,7 @@ describe('Memory', () => {
   });
 
   it('throws on out-of-range read or write addresses', () => {
-    const memory = new Memory();
+    const memory = new Memory(256, 8);
 
     expect(() => memory.read(-1)).toThrow();
     expect(() => memory.read(256)).toThrow();
@@ -92,8 +92,19 @@ describe('Memory', () => {
   });
 
   it('throws when writing a value that is not 8 bits', () => {
-    const memory = new Memory();
+    const memory = new Memory(256, 8);
 
     expect(() => memory.write(0, [1, 0, 1] as Signal[])).toThrow();
+  });
+
+  it('supports 32-bit words when created with a 32-bit word width', () => {
+    const memory = new Memory(256, 32);
+    const value: Signal[] = Array.from({ length: 32 }, (_, index) => ((index % 2 === 0) ? 1 : 0) as Signal);
+
+    memory.write(100, value);
+
+    expect(memory.read(100)).toEqual(value);
+    expect(memory.wordWidth).toBe(32);
+    expect(memory.size).toBe(256);
   });
 });

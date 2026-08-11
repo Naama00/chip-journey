@@ -151,7 +151,8 @@ export function addAlu(
   prefix: string,
   aIds: string[],
   bIds: string[],
-  opSelId: string,
+  opSel0Id: string,
+  opSel1Id: string,
 ): { resultIds: string[]; carryOutId: string; zeroId: string } {
   if (aIds.length !== 8 || bIds.length !== 8) {
     throw new Error('addAlu requires exactly 8 aIds and 8 bIds');
@@ -163,23 +164,38 @@ export function addAlu(
     const notBId = `${prefix}_notB${i}`;
     circuit.addNode({ id: notBId, kind: 'NOT', inputs: [bIds[i]] });
 
-    const muxedBId = addMux2(circuit, `${prefix}_muxB${i}`, opSelId, bIds[i], notBId);
+    const muxedBId = addMux2(circuit, `${prefix}_muxB${i}`, opSel0Id, bIds[i], notBId);
     muxedBIds.push(muxedBId);
   }
 
-  const { sumIds, carryOutId } = addRippleCarryAdder(circuit, `${prefix}_adder`, aIds, muxedBIds, opSelId);
+  const { sumIds, carryOutId } = addRippleCarryAdder(circuit, `${prefix}_adder`, aIds, muxedBIds, opSel0Id);
 
-  let previousOrId = sumIds[0];
-  for (let i = 1; i < sumIds.length; i += 1) {
+  const booleanResultIds: string[] = [];
+
+  for (let i = 0; i < 8; i += 1) {
+    const andId = `${prefix}_and${i}`;
+    const orId = `${prefix}_or${i}`;
+
+    circuit.addNode({ id: andId, kind: 'AND', inputs: [aIds[i], bIds[i]] });
+    circuit.addNode({ id: orId, kind: 'OR', inputs: [aIds[i], bIds[i]] });
+
+    const andOrId = addMux2(circuit, `${prefix}_muxAndOr${i}`, opSel0Id, andId, orId);
+    const resultId = addMux2(circuit, `${prefix}_muxArithBool${i}`, opSel1Id, sumIds[i], andOrId);
+
+    booleanResultIds.push(resultId);
+  }
+
+  let previousOrId = booleanResultIds[0];
+  for (let i = 1; i < booleanResultIds.length; i += 1) {
     const orId = `${prefix}_zeroOr${i}`;
-    circuit.addNode({ id: orId, kind: 'OR', inputs: [previousOrId, sumIds[i]] });
+    circuit.addNode({ id: orId, kind: 'OR', inputs: [previousOrId, booleanResultIds[i]] });
     previousOrId = orId;
   }
 
   const zeroId = `${prefix}_zero`;
   circuit.addNode({ id: zeroId, kind: 'NOT', inputs: [previousOrId] });
 
-  return { resultIds: sumIds, carryOutId, zeroId };
+  return { resultIds: booleanResultIds, carryOutId, zeroId };
 }
 
 export function addRippleCarryAdder(

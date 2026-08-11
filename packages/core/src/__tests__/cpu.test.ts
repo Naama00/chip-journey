@@ -6,6 +6,7 @@ import { Memory, RegisterFile } from '../state';
 import { customProfile } from '../profiles/custom';
 import { encodeInstruction } from '../decoder';
 import { Signal } from '../gates';
+import { customHandlers } from '../execution';
 
 function numberToBitsLsb(value: number): Signal[] {
   const bits: Signal[] = [];
@@ -22,9 +23,9 @@ function bitsToNumberLsb(bits: Signal[]): number {
 describe('CPU', () => {
   it('executes ADD and writes the result to the destination register', () => {
     const instrMem = new InstructionMemory(4, 16);
-    const dataMem = new Memory();
+    const dataMem = new Memory(256, 8);
     const regFile = new RegisterFile(4, 8);
-    const cpu = new CPU(customProfile, instrMem, dataMem, regFile);
+    const cpu = new CPU(customProfile, instrMem, dataMem, regFile, customHandlers);
 
     const instruction = encodeInstruction({ mnemonic: 'ADD', fields: { rd: 1, rs1: 2, rs2: 3 } }, customProfile);
     instrMem.load([instruction]);
@@ -40,9 +41,9 @@ describe('CPU', () => {
 
   it('executes JUMP and updates the PC directly', () => {
     const instrMem = new InstructionMemory(4, 16);
-    const dataMem = new Memory();
+    const dataMem = new Memory(256, 8);
     const regFile = new RegisterFile(4, 8);
-    const cpu = new CPU(customProfile, instrMem, dataMem, regFile);
+    const cpu = new CPU(customProfile, instrMem, dataMem, regFile, customHandlers);
 
     const instruction = encodeInstruction({ mnemonic: 'JUMP', fields: { addr: 3 } }, customProfile);
     instrMem.load([instruction]);
@@ -54,9 +55,9 @@ describe('CPU', () => {
 
   it('halts and throws on stepping after HALT', () => {
     const instrMem = new InstructionMemory(4, 16);
-    const dataMem = new Memory();
+    const dataMem = new Memory(256, 8);
     const regFile = new RegisterFile(4, 8);
-    const cpu = new CPU(customProfile, instrMem, dataMem, regFile);
+    const cpu = new CPU(customProfile, instrMem, dataMem, regFile, customHandlers);
 
     const instruction = encodeInstruction({ mnemonic: 'HALT', fields: {} }, customProfile);
     instrMem.load([instruction]);
@@ -69,9 +70,9 @@ describe('CPU', () => {
 
   it('runs the sum 1 to N program and stores 15 at data address 3', () => {
     const instrMem = new InstructionMemory(16, 16);
-    const dataMem = new Memory();
+    const dataMem = new Memory(256, 8);
     const regFile = new RegisterFile(4, 8);
-    const cpu = new CPU(customProfile, instrMem, dataMem, regFile);
+    const cpu = new CPU(customProfile, instrMem, dataMem, regFile, customHandlers);
 
     dataMem.write(0, numberToBitsLsb(5));
     dataMem.write(1, numberToBitsLsb(0));

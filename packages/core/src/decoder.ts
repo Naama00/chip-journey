@@ -10,7 +10,7 @@ import { Signal } from './gates';
 // codebase, where bits[0] is LSB-first for arithmetic and register values.
 
 export function bitsToNumber(bits: Signal[]): number {
-  return bits.reduce((value, bit) => (value << 1) | bit, 0);
+  return bits.reduce<number>((value, bit) => (value << 1) | bit, 0);
 }
 
 export function numberToBits(value: number, width: number): Signal[] {

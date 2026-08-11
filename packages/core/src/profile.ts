@@ -20,6 +20,8 @@ export type Mnemonic =
   | 'BEQ'
   | 'J';
 
+import { Signal } from './gates';
+
 export interface InstructionFormat {
   mnemonic: Mnemonic;
   opcode: number;
@@ -27,6 +29,17 @@ export interface InstructionFormat {
   fields: FieldSpec[];
   dispatchField?: string;
   dispatchValue?: number;
+  srcRegFields?: string[];
+  destRegField?: string;
+  aluOp?: { opSel0: Signal; opSel1: Signal };
+  aluSecondOperand?: 'register' | 'immediate' | 'zero';
+  aluImmediateField?: string;
+  writesRegFrom?: 'alu' | 'memory' | 'aluSignBit';
+  memOp?: 'read' | 'write';
+  memAddressField?: string;
+  controlFlow?: 'sequential' | 'jump' | 'branch' | 'halt';
+  branchTargetKind?: 'absolute' | 'pcRelative';
+  branchTargetField?: string;
   // The sum of opcodeWidth plus all field widths should be less than or equal to instructionWidth.
 }
 

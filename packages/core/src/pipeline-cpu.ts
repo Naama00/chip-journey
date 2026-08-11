@@ -1,16 +1,26 @@
-import { ProcessorProfile, Mnemonic } from './profile';
+import { ProcessorProfile } from './profile';
 import { InstructionMemory } from './instruction-memory';
-import { Memory } from './state';
-import { RegisterFile } from './state';
+import { Memory, RegisterFile } from './state';
 import { Circuit, addAlu } from './circuit';
 import { decodeInstruction } from './decoder';
 import { Signal } from './gates';
-import { ExecutionContext, ExecutionHandler } from './execution';
+import { ExecutionContext } from './execution';
+import { stageDecode, stageExecute, stageFetch, stageMemory, stageWriteback } from './pipeline-stages';
+import { getRegisterDependencies, hasRawHazard } from './hazards';
+import { makeExMemBubble, makeIdExBubble, makeIfIdBubble, makeMemWbBubble } from './pipeline-latches';
 
-export class CPU implements ExecutionContext {
+export class PipelineCPU implements ExecutionContext {
   public pc = 0;
   public halted = false;
+  public finished = false;
 
+  private _ifIdLatch = makeIfIdBubble();
+  private _idExLatch = makeIdExBubble();
+  private _exMemLatch = makeExMemBubble();
+  private _memWbLatch = makeMemWbBubble();
+
+  private haltSeen = false;
+  private pendingFlush: number | null = null;
   private circuit: Circuit;
   private aIds: string[];
   private bIds: string[];
@@ -24,7 +34,6 @@ export class CPU implements ExecutionContext {
     private instrMem: InstructionMemory,
     private dataMem: Memory,
     private regFile: RegisterFile,
-    private handlers: Record<Mnemonic, ExecutionHandler>,
   ) {
     if (regFile.registerCount !== profile.registerCount || regFile.wordWidth !== profile.dataWidth) {
       throw new Error(
@@ -135,33 +144,106 @@ export class CPU implements ExecutionContext {
     this.circuit.setInput(this.opSel1Id, opSel1);
   }
 
-  private evaluateAlu(): Signal[] {
-    const values = this.circuit.evaluateAll();
-    return this.resultIds.map((id) => values[id] as Signal);
+  private computeStall(): boolean {
+    if (this._ifIdLatch.isBubble) {
+      return false;
+    }
+
+    const decoded = decodeInstruction(this._ifIdLatch.instructionBits, this.profile);
+    const format = this.profile.instructionSet.find((entry) => entry.mnemonic === decoded.mnemonic);
+
+    if (!format) {
+      throw new Error(`Unknown instruction mnemonic during hazard check: ${decoded.mnemonic}`);
+    }
+
+    const { reads } = getRegisterDependencies(decoded, format);
+    return hasRawHazard(reads, this._idExLatch, this._exMemLatch, this._memWbLatch);
   }
 
   step(): void {
-    if (this.halted) {
-      throw new Error('Cannot step a halted CPU');
+    if (this.finished) {
+      throw new Error('Cannot step a finished PipelineCPU');
     }
 
-    const instructionBits = this.instrMem.read(this.pc);
-    const decoded = decodeInstruction(instructionBits, this.profile);
-    const handler = this.handlers[decoded.mnemonic];
+    const flushTargetFromLastCycle = this.pendingFlush;
 
-    if (!handler) {
-      throw new Error(`No execution handler registered for mnemonic ${decoded.mnemonic}`);
+    stageWriteback(this.memWbLatch, this);
+
+    const newMemWb = stageMemory(this.exMemLatch, this);
+    const newExMem = stageExecute(this.idExLatch, this.profile, this);
+    if (newExMem.isBubble === false && newExMem.isHalt) {
+      this.haltSeen = true;
     }
 
-    handler(this, decoded.fields);
+    let newIdEx = makeIdExBubble();
+    let newIfId = this._ifIdLatch;
+
+    if (flushTargetFromLastCycle !== null) {
+      newIdEx = makeIdExBubble();
+      this.pc = flushTargetFromLastCycle;
+      this.pendingFlush = null;
+      newIfId = this.haltSeen ? makeIfIdBubble() : stageFetch(this.pc, this.instrMem);
+      if (!this.haltSeen) {
+        this.pc += 1;
+      }
+    } else if (newExMem.isBubble === false && newExMem.branchTaken) {
+      newIdEx = makeIdExBubble();
+      // Overwrite any pending flush if a new branch resolves in EX before a
+      // previous branch has fully drained. This simple model does not handle
+      // overlapping taken branches inside the penalty window.
+      this.pendingFlush = newExMem.branchTarget;
+      newIfId = this.haltSeen ? makeIfIdBubble() : stageFetch(this.pc, this.instrMem);
+      if (!this.haltSeen) {
+        this.pc += 1;
+      }
+    } else {
+      const stalling = this.computeStall();
+      newIdEx = stalling ? makeIdExBubble() : stageDecode(this._ifIdLatch, this.profile, this);
+
+      if (!stalling) {
+        if (this.haltSeen) {
+          newIfId = makeIfIdBubble();
+        } else {
+          newIfId = stageFetch(this.pc, this.instrMem);
+          this.pc += 1;
+        }
+      } else {
+        newIfId = this._ifIdLatch;
+      }
+    }
+
+    this._ifIdLatch = newIfId;
+    this._idExLatch = newIdEx;
+    this._exMemLatch = newExMem;
+    this._memWbLatch = newMemWb;
+
+    if (this.haltSeen && this._ifIdLatch.isBubble && this._idExLatch.isBubble && this._exMemLatch.isBubble && this._memWbLatch.isBubble) {
+      this.finished = true;
+    }
+  }
+
+  get ifIdLatch() {
+    return this._ifIdLatch;
+  }
+
+  get idExLatch() {
+    return this._idExLatch;
+  }
+
+  get exMemLatch() {
+    return this._exMemLatch;
+  }
+
+  get memWbLatch() {
+    return this._memWbLatch;
   }
 
   run(maxCycles: number): void {
     let cycles = 0;
 
-    while (!this.halted) {
+    while (!this.finished) {
       if (cycles >= maxCycles) {
-        throw new Error(`CPU did not halt within ${maxCycles} cycles`);
+        throw new Error(`PipelineCPU did not finish within ${maxCycles} cycles`);
       }
 
       this.step();

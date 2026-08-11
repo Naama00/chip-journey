@@ -9,8 +9,8 @@ function validateInstructionWidth(format: InstructionFormat, instructionWidth: n
 }
 
 describe('mipsProfile', () => {
-  it('has exactly 10 instruction formats', () => {
-    expect(mipsProfile.instructionSet).toHaveLength(10);
+  it('has exactly 11 instruction formats', () => {
+    expect(mipsProfile.instructionSet).toHaveLength(11);
   });
 
   it('validates opcode and field widths against instruction width for all formats', () => {

@@ -185,13 +185,15 @@ describe('Circuit', () => {
         circuit.addNode({ id: `b${i}`, kind: 'INPUT', inputs: [] });
       }
 
-      circuit.addNode({ id: 'opSel', kind: 'INPUT', inputs: [] });
+      circuit.addNode({ id: 'opSel0', kind: 'INPUT', inputs: [] });
+      circuit.addNode({ id: 'opSel1', kind: 'INPUT', inputs: [] });
 
-      const { resultIds, carryOutId, zeroId } = addAlu(circuit, 'alu', aIds, bIds, 'opSel');
+      const { resultIds, carryOutId, zeroId } = addAlu(circuit, 'alu', aIds, bIds, 'opSel0', 'opSel1');
 
       setInputBits(circuit, aIds, numberToBits(5));
       setInputBits(circuit, bIds, numberToBits(3));
-      circuit.setInput('opSel', 0);
+      circuit.setInput('opSel0', 0);
+      circuit.setInput('opSel1', 0);
 
       const values = circuit.evaluateAll();
       const resultBits = resultIds.map((id) => values[id] as Signal);
@@ -213,18 +215,78 @@ describe('Circuit', () => {
         circuit.addNode({ id: `b${i}`, kind: 'INPUT', inputs: [] });
       }
 
-      circuit.addNode({ id: 'opSel', kind: 'INPUT', inputs: [] });
+      circuit.addNode({ id: 'opSel0', kind: 'INPUT', inputs: [] });
+      circuit.addNode({ id: 'opSel1', kind: 'INPUT', inputs: [] });
 
-      const { resultIds, zeroId } = addAlu(circuit, 'alu', aIds, bIds, 'opSel');
+      const { resultIds, zeroId } = addAlu(circuit, 'alu', aIds, bIds, 'opSel0', 'opSel1');
 
       setInputBits(circuit, aIds, numberToBits(5));
       setInputBits(circuit, bIds, numberToBits(3));
-      circuit.setInput('opSel', 1);
+      circuit.setInput('opSel0', 1);
+      circuit.setInput('opSel1', 0);
 
       const values = circuit.evaluateAll();
       const resultBits = resultIds.map((id) => values[id] as Signal);
 
       expect(resultBits).toEqual(numberToBits(2));
+      expect(values[zeroId]).toBe(0);
+    });
+
+    it('performs 5 AND 3 = 1 when opSel1 is 1 and opSel0 is 0', () => {
+      const circuit = new Circuit();
+      const aIds: string[] = [];
+      const bIds: string[] = [];
+
+      for (let i = 0; i < 8; i += 1) {
+        aIds.push(`a${i}`);
+        bIds.push(`b${i}`);
+        circuit.addNode({ id: `a${i}`, kind: 'INPUT', inputs: [] });
+        circuit.addNode({ id: `b${i}`, kind: 'INPUT', inputs: [] });
+      }
+
+      circuit.addNode({ id: 'opSel0', kind: 'INPUT', inputs: [] });
+      circuit.addNode({ id: 'opSel1', kind: 'INPUT', inputs: [] });
+
+      const { resultIds, zeroId } = addAlu(circuit, 'alu', aIds, bIds, 'opSel0', 'opSel1');
+
+      setInputBits(circuit, aIds, numberToBits(5));
+      setInputBits(circuit, bIds, numberToBits(3));
+      circuit.setInput('opSel0', 0);
+      circuit.setInput('opSel1', 1);
+
+      const values = circuit.evaluateAll();
+      const resultBits = resultIds.map((id) => values[id] as Signal);
+
+      expect(resultBits).toEqual(numberToBits(1));
+      expect(values[zeroId]).toBe(0);
+    });
+
+    it('performs 5 OR 3 = 7 when opSel1 is 1 and opSel0 is 1', () => {
+      const circuit = new Circuit();
+      const aIds: string[] = [];
+      const bIds: string[] = [];
+
+      for (let i = 0; i < 8; i += 1) {
+        aIds.push(`a${i}`);
+        bIds.push(`b${i}`);
+        circuit.addNode({ id: `a${i}`, kind: 'INPUT', inputs: [] });
+        circuit.addNode({ id: `b${i}`, kind: 'INPUT', inputs: [] });
+      }
+
+      circuit.addNode({ id: 'opSel0', kind: 'INPUT', inputs: [] });
+      circuit.addNode({ id: 'opSel1', kind: 'INPUT', inputs: [] });
+
+      const { resultIds, zeroId } = addAlu(circuit, 'alu', aIds, bIds, 'opSel0', 'opSel1');
+
+      setInputBits(circuit, aIds, numberToBits(5));
+      setInputBits(circuit, bIds, numberToBits(3));
+      circuit.setInput('opSel0', 1);
+      circuit.setInput('opSel1', 1);
+
+      const values = circuit.evaluateAll();
+      const resultBits = resultIds.map((id) => values[id] as Signal);
+
+      expect(resultBits).toEqual(numberToBits(7));
       expect(values[zeroId]).toBe(0);
     });
 
@@ -240,13 +302,15 @@ describe('Circuit', () => {
         circuit.addNode({ id: `b${i}`, kind: 'INPUT', inputs: [] });
       }
 
-      circuit.addNode({ id: 'opSel', kind: 'INPUT', inputs: [] });
+      circuit.addNode({ id: 'opSel0', kind: 'INPUT', inputs: [] });
+      circuit.addNode({ id: 'opSel1', kind: 'INPUT', inputs: [] });
 
-      const { resultIds, zeroId } = addAlu(circuit, 'alu', aIds, bIds, 'opSel');
+      const { resultIds, zeroId } = addAlu(circuit, 'alu', aIds, bIds, 'opSel0', 'opSel1');
 
       setInputBits(circuit, aIds, numberToBits(5));
       setInputBits(circuit, bIds, numberToBits(5));
-      circuit.setInput('opSel', 1);
+      circuit.setInput('opSel0', 1);
+      circuit.setInput('opSel1', 0);
 
       const values = circuit.evaluateAll();
       const resultBits = resultIds.map((id) => values[id] as Signal);
@@ -267,13 +331,15 @@ describe('Circuit', () => {
         circuit.addNode({ id: `b${i}`, kind: 'INPUT', inputs: [] });
       }
 
-      circuit.addNode({ id: 'opSel', kind: 'INPUT', inputs: [] });
+      circuit.addNode({ id: 'opSel0', kind: 'INPUT', inputs: [] });
+      circuit.addNode({ id: 'opSel1', kind: 'INPUT', inputs: [] });
 
-      const { resultIds, zeroId } = addAlu(circuit, 'alu', aIds, bIds, 'opSel');
+      const { resultIds, zeroId } = addAlu(circuit, 'alu', aIds, bIds, 'opSel0', 'opSel1');
 
       setInputBits(circuit, aIds, numberToBits(6));
       setInputBits(circuit, bIds, numberToBits(3));
-      circuit.setInput('opSel', 1);
+      circuit.setInput('opSel0', 1);
+      circuit.setInput('opSel1', 0);
 
       const values = circuit.evaluateAll();
       const resultBits = resultIds.map((id) => values[id] as Signal);
