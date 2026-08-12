@@ -82,7 +82,8 @@ export function stageExecute(idExLatch: IdExLatch, profile: ProcessorProfile, ct
           throw new Error('aluSecondOperand is immediate but no aluImmediateField is defined');
         }
         const rawImmediate = idExLatch.decoded.fields[immediateField];
-        const signed = signExtendImmediate(rawImmediate, profile.dataWidth);
+        const immediateWidth = format.fields.find((field) => field.name === immediateField)?.width ?? profile.dataWidth;
+        const signed = signExtendImmediate(rawImmediate, immediateWidth);
         secondOperand = numberToTwosComplementBits(signed, profile.dataWidth);
         break;
       }

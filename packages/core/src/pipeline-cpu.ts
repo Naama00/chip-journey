@@ -6,6 +6,8 @@ import { decodeInstruction } from './decoder';
 import { Signal } from './gates';
 import { ExecutionContext } from './execution';
 import { stageDecode, stageExecute, stageFetch, stageMemory, stageWriteback } from './pipeline-stages';
+import { Cache } from './cache';
+import { CachedMemory } from './cached-memory';
 import { getRegisterDependencies, hasRawHazard } from './hazards';
 import { makeExMemBubble, makeIdExBubble, makeIfIdBubble, makeMemWbBubble } from './pipeline-latches';
 
@@ -22,6 +24,8 @@ export class PipelineCPU implements ExecutionContext {
   private haltSeen = false;
   private pendingFlush: number | null = null;
   private circuit: Circuit;
+  private readonly cache: Cache;
+  private readonly cachedMemory: CachedMemory;
   private aIds: string[];
   private bIds: string[];
   private opSel0Id: string;
@@ -34,6 +38,7 @@ export class PipelineCPU implements ExecutionContext {
     private instrMem: InstructionMemory,
     private dataMem: Memory,
     private regFile: RegisterFile,
+    cacheLineCount: number = 4,
   ) {
     if (regFile.registerCount !== profile.registerCount || regFile.wordWidth !== profile.dataWidth) {
       throw new Error(
@@ -47,6 +52,8 @@ export class PipelineCPU implements ExecutionContext {
     this.opSel0Id = 'alu_opSel0';
     this.opSel1Id = 'alu_opSel1';
     this.useCircuitAlu = profile.dataWidth === 8;
+    this.cache = new Cache(cacheLineCount, profile.dataWidth);
+    this.cachedMemory = new CachedMemory(dataMem, this.cache);
 
     if (this.useCircuitAlu) {
       for (let i = 0; i < profile.dataWidth; i += 1) {
@@ -87,11 +94,19 @@ export class PipelineCPU implements ExecutionContext {
   }
 
   readMem(addr: number): Signal[] {
-    return this.dataMem.read(addr);
+    return this.cachedMemory.read(addr).value;
   }
 
   writeMem(addr: number, value: Signal[]): void {
-    this.dataMem.write(addr, value);
+    this.cachedMemory.write(addr, value);
+  }
+
+  public get cacheStats() {
+    return {
+      hitCount: this.cachedMemory.hitCount,
+      missCount: this.cachedMemory.missCount,
+      hitRate: this.cachedMemory.hitRate,
+    };
   }
 
   runAlu(a: Signal[], b: Signal[], opSel0: Signal, opSel1: Signal) {

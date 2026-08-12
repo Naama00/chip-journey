@@ -165,6 +165,8 @@ export const mipsProfile: ProcessorProfile = {
       controlFlow: 'branch',
       branchTargetKind: 'pcRelative',
       branchTargetField: 'immediate',
+      aluOp: { opSel0: 1, opSel1: 0 },
+      aluSecondOperand: 'register',
     },
     {
       mnemonic: 'J',

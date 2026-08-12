@@ -94,5 +94,8 @@ describe('CPU', () => {
     cpu.run(1000);
 
     expect(bitsToNumberLsb(dataMem.read(3))).toBe(15);
+    expect(cpu.cacheStats.missCount).toBeGreaterThan(0);
+    expect(cpu.cacheStats.hitCount).toBeGreaterThanOrEqual(0);
+    expect(cpu.cacheStats.hitRate).toBeGreaterThanOrEqual(0);
   });
 });
